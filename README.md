@@ -8,10 +8,15 @@ A task management app with a visual dependency graph that I **VIBE CODED**. Task
 
 - **Dependency graph** — drag cards to move, drag the port handle (→) on the right edge to connect tasks, right-click an arrow to remove it
 - **Projects** — sidebar with named, colour-coded projects; each project has its own independent canvas (pan/zoom state resets per project)
+- **Archive projects** — archive a project to tuck it out of the way; archived projects collapse into their own sidebar section and can be restored (un-archived) any time
+- **Task notes & label colours** — every task has a free-form notes field and an optional accent label colour, both editable from the task modal
+- **Attachments** — attach files to a task; download or remove them from the task modal, the cards, or the Overall Notes view
+- **Overall** — a read-only consolidated graph of every active project aligned on a shared date axis
+- **Overall Notes** — a collapsible project → task → notes hierarchy summarising all projects; notes are editable inline and expanded nodes persist across sessions
 - **Multi-user auth** — login/register with password; users only see their own projects
 - **Undo / Redo** — Ctrl+Z / Ctrl+Y, or the ⟲ ⟳ buttons on the canvas
 - **Auto-arrange** — topological layout based on dependency order
-- **Export / Import** — full JSON dump; import upserts projects/tasks, never deletes existing data
+- **Export / Import** — full JSON dump (including notes, labels, archive flag and attachment data); import upserts projects/tasks, never deletes existing data
 - **Zoom & pan** — scroll to zoom, drag background to pan
 
 ## Tech stack
@@ -65,10 +70,12 @@ Rsyncs the project to `joncastillo@192.168.50.199:/mnt/sda/opt/dev_atomic_record
 ```
 users       id, username, password_hash, created_at
 sessions    id, user_id, created_at
-projects    id, user_id, name, color, created_at
-tasks       id, project_id, title, description, created_date, due_date,
-            completed, completed_date, depends_on (JSON array of task IDs)
+projects    id, user_id, name, color, created_at, archived
+tasks       id, project_id, title, description, notes, label_color,
+            created_date, due_date, completed, completed_date,
+            depends_on (JSON array of task IDs)
 positions   task_id, x, y
+attachments id, task_id, filename, mime, size, data (base64), created_at
 ```
 
 Task status is derived at runtime: **pending** (incomplete, not overdue), **overdue** (incomplete, past due date), **completed**.

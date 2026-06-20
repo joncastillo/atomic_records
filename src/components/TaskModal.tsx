@@ -1,29 +1,43 @@
-import { useState, useEffect } from 'react'
-import { Task, today } from '../types'
+import { useState, useEffect, useRef } from 'react'
+import { Task, Attachment, today, LABEL_PALETTE, formatBytes } from '../types'
+import { api, downloadAttachment, fileToBase64 } from '../api'
 
 interface Props {
   task?: Task | null
   allTasks: Task[]
-  onSave: (data: Omit<Task, 'id' | 'completed' | 'completedDate'>) => void
+  onSave: (data: Omit<Task, 'id' | 'completed' | 'completedDate' | 'attachments'>) => void
   onClose: () => void
+  // Sync attachment changes back into the board state (cards / overall notes)
+  onAttachmentsChange?: (taskId: string, attachments: Attachment[]) => void
 }
 
-export default function TaskModal({ task, allTasks, onSave, onClose }: Props) {
+const MAX_FILE_BYTES = 20 * 1024 * 1024 // 20 MB
+
+export default function TaskModal({ task, allTasks, onSave, onClose, onAttachmentsChange }: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [notes, setNotes] = useState('')
+  const [labelColor, setLabelColor] = useState<string>('')
   const [createdDate, setCreatedDate] = useState(today())
   const [dueDate, setDueDate] = useState(today())
   const [dependsOn, setDependsOn] = useState<string[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (task) {
       setTitle(task.title)
       setDescription(task.description)
+      setNotes(task.notes ?? '')
+      setLabelColor(task.labelColor ?? '')
       setCreatedDate(task.createdDate)
       setDueDate(task.dueDate)
       setDependsOn(task.dependsOn)
+      setAttachments(task.attachments ?? [])
     } else {
-      setTitle(''); setDescription(''); setCreatedDate(today()); setDueDate(today()); setDependsOn([])
+      setTitle(''); setDescription(''); setNotes(''); setLabelColor('')
+      setCreatedDate(today()); setDueDate(today()); setDependsOn([]); setAttachments([])
     }
   }, [task])
 
@@ -34,7 +48,50 @@ export default function TaskModal({ task, allTasks, onSave, onClose }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || !dueDate) return
-    onSave({ title: title.trim(), description: description.trim(), createdDate, dueDate, dependsOn })
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      notes: notes.trim(),
+      labelColor: labelColor || undefined,
+      createdDate, dueDate, dependsOn,
+    })
+  }
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || !task) return
+    setUploading(true)
+    try {
+      let next = attachments
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_FILE_BYTES) {
+          alert(`"${file.name}" is too large (max ${formatBytes(MAX_FILE_BYTES)}).`)
+          continue
+        }
+        const data = await fileToBase64(file)
+        const att = await api.uploadAttachment(task.id, { filename: file.name, mime: file.type, data })
+        next = [...next, att]
+        setAttachments(next)
+      }
+      onAttachmentsChange?.(task.id, next)
+    } catch (err) {
+      alert('Upload failed: ' + String(err))
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function handleRemoveAttachment(att: Attachment) {
+    if (!task) return
+    if (!confirm(`Remove "${att.filename}"?`)) return
+    try {
+      await api.deleteAttachment(att.id)
+      const next = attachments.filter(a => a.id !== att.id)
+      setAttachments(next)
+      onAttachmentsChange?.(task.id, next)
+    } catch (err) {
+      alert('Delete failed: ' + String(err))
+    }
   }
 
   // Candidates: all tasks except the one being edited (can't depend on itself)
@@ -71,6 +128,33 @@ export default function TaskModal({ task, allTasks, onSave, onClose }: Props) {
             />
           </div>
 
+          {/* Label colour */}
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest mb-1">Label Colour</label>
+            <div className="flex gap-2 flex-wrap items-center">
+              {LABEL_PALETTE.map(c => {
+                const isNone = c === ''
+                const selected = labelColor === c
+                return (
+                  <button
+                    key={c || 'none'}
+                    type="button"
+                    onClick={() => setLabelColor(c)}
+                    title={isNone ? 'No label' : c}
+                    className="w-7 h-7 flex items-center justify-center font-black text-xs"
+                    style={{
+                      background: isNone ? '#fff' : c,
+                      border: selected ? '3px solid #000' : '2px solid #999',
+                      boxShadow: selected ? '2px 2px 0 #000' : 'none',
+                    }}
+                  >
+                    {isNone ? '∅' : selected ? '✓' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Description */}
           <div>
             <label className="block text-xs font-black uppercase tracking-widest mb-1">Description</label>
@@ -80,6 +164,22 @@ export default function TaskModal({ task, allTasks, onSave, onClose }: Props) {
               placeholder="What needs to be done?"
               rows={3}
               className="w-full px-3 py-2 font-mono text-sm focus:outline-none focus:bg-yellow-50 bg-white resize-none"
+              style={{ border: '3px solid black' }}
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest mb-1">
+              Notes
+              <span className="opacity-40 ml-2 normal-case">(running notes / context)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Add notes…"
+              rows={4}
+              className="w-full px-3 py-2 font-mono text-sm focus:outline-none focus:bg-yellow-50 bg-white resize-y"
               style={{ border: '3px solid black' }}
             />
           </div>
@@ -107,6 +207,54 @@ export default function TaskModal({ task, allTasks, onSave, onClose }: Props) {
                 style={{ border: '3px solid black' }}
               />
             </div>
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest mb-1">Attachments</label>
+            {!task ? (
+              <p className="text-xs font-mono opacity-50 border-2 border-dashed border-gray-400 px-3 py-2">
+                Save the task first to attach files.
+              </p>
+            ) : (
+              <div className="border-black bg-white" style={{ border: '3px solid black' }}>
+                {attachments.length > 0 && (
+                  <div className="divide-y-2 divide-black">
+                    {attachments.map(att => (
+                      <div key={att.id} className="flex items-center gap-2 px-3 py-2">
+                        <span className="shrink-0">📎</span>
+                        <button
+                          type="button"
+                          onClick={() => downloadAttachment(att).catch(e => alert('Download failed: ' + String(e)))}
+                          className="text-xs font-black truncate text-left hover:underline flex-1 min-w-0"
+                          title={`Download ${att.filename}`}
+                        >
+                          {att.filename}
+                        </button>
+                        <span className="text-xs font-mono opacity-40 shrink-0">{formatBytes(att.size)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(att)}
+                          className="shrink-0 w-5 h-5 border-2 border-black font-black text-xs hover:bg-red-500 hover:text-white transition-colors"
+                          title="Remove attachment"
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="px-3 py-2 border-t-2 border-black">
+                  <input ref={fileRef} type="file" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="text-xs font-black uppercase tracking-widest border-2 border-black px-3 py-1.5 hover:bg-black hover:text-yellow-300 transition-colors disabled:opacity-40"
+                  >
+                    {uploading ? 'Uploading…' : '+ Attach File'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dependencies */}

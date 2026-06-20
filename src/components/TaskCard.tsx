@@ -1,5 +1,6 @@
 import { Task, TaskStatus, getTaskStatus, formatDate } from '../types'
 import { CARD_W } from '../utils'
+import { downloadAttachment } from '../api'
 
 interface Props {
   task: Task
@@ -44,6 +45,11 @@ export default function TaskCard({ task, index, isConnectTarget, isConnectSource
       className={`border-4 ${s.card} flex flex-col select-none relative ${outlineStyle}`}
       style={{ width: CARD_W, boxShadow: '6px 6px 0 #000' }}
     >
+      {/* Label colour strip */}
+      {task.labelColor && (
+        <div className="h-2 w-full border-b-2 border-black shrink-0" style={{ background: task.labelColor }} />
+      )}
+
       {/* Header row: index + checkbox + status badge */}
       <div className="flex items-start gap-2 px-3 pt-3 pb-2 shrink-0">
         <span className="text-xs font-black opacity-30 shrink-0 mt-0.5">
@@ -79,6 +85,33 @@ export default function TaskCard({ task, index, isConnectTarget, isConnectSource
           <p className="text-xs text-gray-700 font-mono leading-relaxed mb-2 break-words">
             {task.description}
           </p>
+        )}
+
+        {/* Notes */}
+        {task.notes && (
+          <div className="mb-2 border-l-4 border-black pl-2">
+            <p className="text-xs font-black uppercase tracking-widest opacity-40 leading-tight">Notes</p>
+            <p className="text-xs text-gray-700 font-mono leading-relaxed whitespace-pre-wrap break-words">
+              {task.notes}
+            </p>
+          </div>
+        )}
+
+        {/* Attachments */}
+        {task.attachments?.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {task.attachments.map(att => (
+              <button
+                key={att.id}
+                onMouseDown={e => e.stopPropagation()}
+                onClick={() => downloadAttachment(att).catch(e => alert('Download failed: ' + String(e)))}
+                className="text-xs font-mono border-2 border-black px-1.5 py-0.5 bg-white hover:bg-yellow-200 transition-colors max-w-full truncate"
+                title={`Download ${att.filename}`}
+              >
+                📎 {att.filename}
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Dates */}
