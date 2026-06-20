@@ -1,4 +1,4 @@
-import { Task, Project } from './types'
+import { Task, Project, Attachment } from './types'
 import { Positions } from './utils'
 
 let _token: string | null = localStorage.getItem('auth_token')
@@ -25,8 +25,9 @@ const body = (d: unknown) => JSON.stringify(d)
 
 export interface AuthUser { id: string; username: string }
 export interface ExportProject {
-  id: string; name: string; color: string; createdAt: string
+  id: string; name: string; color: string; createdAt: string; archived?: boolean
   tasks: Task[]; positions: Positions
+  attachmentData?: unknown[]
 }
 export interface ExportPayload {
   version: number; exportedAt: string; projects: ExportProject[]
@@ -52,7 +53,7 @@ export const api = {
   // Projects
   getProjects:       ()                          => call<Project[]>('/api/projects'),
   createProject:     (p: Omit<Project, 'taskCount'>) => call<void>('/api/projects', { method: 'POST', headers: J, body: body(p) }),
-  updateProject:     (p: Pick<Project, 'id' | 'name' | 'color'>) =>
+  updateProject:     (p: { id: string; name?: string; color?: string; archived?: boolean }) =>
                        call<void>(`/api/projects/${p.id}`, { method: 'PUT', headers: J, body: body(p) }),
   deleteProject:     (id: string)                => call<void>(`/api/projects/${id}`, { method: 'DELETE' }),
 
@@ -72,8 +73,42 @@ export const api = {
   replaceBoardState:    (pid: string, tasks: Task[], positions: Positions) =>
                           call<void>(`/api/projects/${pid}/board`, { method: 'PUT', headers: J, body: body({ tasks, positions }) }),
 
+  // Attachments
+  getAttachments:       (taskId: string)         => call<Attachment[]>(`/api/tasks/${taskId}/attachments`),
+  uploadAttachment:     (taskId: string, file: { filename: string; mime: string; data: string }) =>
+                          call<Attachment>(`/api/tasks/${taskId}/attachments`, { method: 'POST', headers: J, body: body(file) }),
+  deleteAttachment:     (id: string)             => call<void>(`/api/attachments/${id}`, { method: 'DELETE' }),
+
   // Export / Import
   exportAll:            ()                       => call<ExportPayload>('/api/export'),
   importAll:            (projects: ExportProject[]) =>
                           call<{ ok: boolean; imported: number }>('/api/import', { method: 'POST', headers: J, body: body({ projects }) }),
+}
+
+// Fetch an attachment (auth header required) and trigger a browser download
+export async function downloadAttachment(att: Attachment): Promise<void> {
+  const headers: Record<string, string> = {}
+  if (_token) headers['Authorization'] = `Bearer ${_token}`
+  const r = await fetch(`/api/attachments/${att.id}/download`, { headers })
+  if (!r.ok) throw new Error('Download failed')
+  const blob = await r.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = att.filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// Read a File into a base64 string (no data: prefix)
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      resolve(result.includes(',') ? result.split(',')[1] : result)
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
 }

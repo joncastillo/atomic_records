@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Task, Project, today, OVERALL_PROJECT_ID, OVERALL_PROJECT } from './types'
+import {
+  Task, Project, Attachment, today,
+  OVERALL_PROJECT_ID, OVERALL_PROJECT,
+  OVERALL_NOTES_PROJECT_ID, OVERALL_NOTES_PROJECT,
+} from './types'
 import { Positions, autoArrange } from './utils'
 import { api, checkAuth, setToken, AuthUser, ExportProject } from './api'
 import TaskGraph from './components/TaskGraph'
 import OverallGraph from './components/OverallGraph'
+import OverallNotes from './components/OverallNotes'
 import TaskModal from './components/TaskModal'
 import StatsBar from './components/StatsBar'
 import Sidebar, { ExpTask } from './components/Sidebar'
@@ -120,7 +125,7 @@ export default function App() {
 
   // ── Load board when project switches ──────────────────
   useEffect(() => {
-    if (!activeId || activeId === OVERALL_PROJECT_ID) {
+    if (!activeId || activeId === OVERALL_PROJECT_ID || activeId === OVERALL_NOTES_PROJECT_ID) {
       setTasks([]); setPositions({}); return
     }
     setTasks([])
@@ -140,7 +145,7 @@ export default function App() {
   // ── Project handlers ───────────────────────────────────
   function handleCreateProject(name: string, color: string) {
     const id = genId()
-    const p: Omit<Project, 'taskCount'> = { id, name, color, createdAt: new Date().toISOString() }
+    const p: Omit<Project, 'taskCount'> = { id, name, color, createdAt: new Date().toISOString(), archived: false }
     setProjects(prev => [...prev, { ...p, taskCount: 0 }])
     setAllTasksMap(prev => ({ ...prev, [id]: [] }))
     api.createProject(p)
@@ -149,8 +154,19 @@ export default function App() {
 
   function handleRenameProject(id: string, name: string) {
     setProjects(prev => prev.map(p => p.id === id ? { ...p, name } : p))
-    const proj = projects.find(p => p.id === id)
-    if (proj) api.updateProject({ id, name, color: proj.color })
+    api.updateProject({ id, name })
+  }
+
+  function handleArchiveProject(id: string) {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, archived: true } : p))
+    api.updateProject({ id, archived: true })
+    if (activeId === id) setActiveId(OVERALL_PROJECT_ID)
+  }
+
+  function handleUnarchiveProject(id: string) {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, archived: false } : p))
+    api.updateProject({ id, archived: false })
+    setActiveId(id)
   }
 
   function handleDeleteProject(id: string) {
@@ -173,15 +189,15 @@ export default function App() {
     return p
   }
 
-  function handleSave(data: Omit<Task, 'id' | 'completed' | 'completedDate'>) {
-    if (!activeId || activeId === OVERALL_PROJECT_ID) return
+  function handleSave(data: Omit<Task, 'id' | 'completed' | 'completedDate' | 'attachments'>) {
+    if (!activeId || activeId === OVERALL_PROJECT_ID || activeId === OVERALL_NOTES_PROJECT_ID) return
     if (editingTask) {
       const updated = tasks.map(t => t.id === editingTask.id ? { ...t, ...data } : t)
       applyTasks(updated)
       api.updateTask(updated.find(t => t.id === editingTask.id)!)
     } else {
       const id = genId()
-      const newTask: Task = { id, completed: false, ...data }
+      const newTask: Task = { id, completed: false, attachments: [], ...data }
       const updated = [...tasks, newTask]
       const xs = Object.values(positions).map(p => p.x)
       const x = xs.length ? Math.max(...xs) + 320 : 60
@@ -240,6 +256,30 @@ export default function App() {
     api.updateTask(updated.find(t => t.id === toId)!)
   }
 
+  // Patch a single task in both the active board and the cross-project cache
+  function patchTask(projectId: string, taskId: string, patch: Partial<Task>) {
+    setAllTasksMap(prev => ({
+      ...prev,
+      [projectId]: (prev[projectId] ?? []).map(t => t.id === taskId ? { ...t, ...patch } : t),
+    }))
+    if (projectId === activeId) {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...patch } : t))
+    }
+  }
+
+  function handleAttachmentsChange(taskId: string, attachments: Attachment[]) {
+    if (!activeId || activeId === OVERALL_PROJECT_ID || activeId === OVERALL_NOTES_PROJECT_ID) return
+    patchTask(activeId, taskId, { attachments })
+  }
+
+  // Inline notes edit from the Overall Notes view (task may be in any project)
+  function handleSaveNotes(taskId: string, projectId: string, notes: string) {
+    const task = (allTasksMap[projectId] ?? []).find(t => t.id === taskId)
+    if (!task) return
+    patchTask(projectId, taskId, { notes })
+    api.updateTask({ ...task, notes })
+  }
+
   function handleAutoArrange() {
     const next = autoArrange(tasks)
     setPositions(next)
@@ -290,19 +330,25 @@ export default function App() {
   function closeModal() { setShowModal(false); setEditingTask(null) }
 
   // ── Derived data ───────────────────────────────────────
+  const activeProjects = useMemo(() => projects.filter(p => !p.archived), [projects])
+  const archivedProjects = useMemo(() => projects.filter(p => p.archived), [projects])
+
   const totalTaskCount = useMemo(
-    () => Object.values(allTasksMap).reduce((sum, t) => sum + t.length, 0),
-    [allTasksMap]
+    () => activeProjects.reduce((sum, p) => sum + (allTasksMap[p.id]?.length ?? 0), 0),
+    [activeProjects, allTasksMap]
   )
 
   const overallProject: Project = { ...OVERALL_PROJECT, taskCount: totalTaskCount }
-  const displayProjects = [overallProject, ...projects]
+  const overallNotesProject: Project = { ...OVERALL_NOTES_PROJECT, taskCount: totalTaskCount }
+  const displayProjects = [overallProject, overallNotesProject, ...activeProjects]
   const activeProject = displayProjects.find(p => p.id === activeId)
   const isOverall = activeId === OVERALL_PROJECT_ID
+  const isOverallNotes = activeId === OVERALL_NOTES_PROJECT_ID
+  const isSpecial = isOverall || isOverallNotes
 
   const allTasksList = useMemo(
-    () => Object.values(allTasksMap).flat(),
-    [allTasksMap]
+    () => activeProjects.flatMap(p => allTasksMap[p.id] ?? []),
+    [activeProjects, allTasksMap]
   )
 
   const expiringTasks = useMemo((): ExpTask[] => {
@@ -311,7 +357,7 @@ export default function App() {
     limit.setDate(limit.getDate() + 3)
     const limitStr = limit.toISOString().split('T')[0]
     const result: ExpTask[] = []
-    projects.forEach(p => {
+    activeProjects.forEach(p => {
       ;(allTasksMap[p.id] ?? []).forEach(t => {
         if (!t.completed && t.dueDate >= todayStr && t.dueDate <= limitStr) {
           result.push({ task: t, projectId: p.id, projectName: p.name, projectColor: p.color })
@@ -320,7 +366,7 @@ export default function App() {
     })
     result.sort((a, b) => a.task.dueDate.localeCompare(b.task.dueDate))
     return result
-  }, [allTasksMap, projects])
+  }, [allTasksMap, activeProjects])
 
   if (authChecking) {
     return (
@@ -350,11 +396,14 @@ export default function App() {
     <div className="h-screen flex overflow-hidden">
       <Sidebar
         projects={displayProjects}
+        archivedProjects={archivedProjects}
         activeId={activeId}
         onSelect={setActiveId}
         onCreate={handleCreateProject}
         onRename={handleRenameProject}
         onDelete={handleDeleteProject}
+        onArchive={handleArchiveProject}
+        onUnarchive={handleUnarchiveProject}
         expiringTasks={expiringTasks}
       />
 
@@ -367,11 +416,13 @@ export default function App() {
                 {activeProject ? activeProject.name : 'SELECT A PROJECT'}
               </h1>
               <p className="text-xs font-mono opacity-50">
-                {isOverall ? '// all projects consolidated' : '// task dependency graph'}
+                {isOverall ? '// all projects consolidated'
+                  : isOverallNotes ? '// notes summary'
+                  : '// task dependency graph'}
               </p>
             </div>
 
-            {activeProject && <StatsBar tasks={isOverall ? allTasksList : tasks} />}
+            {activeProject && <StatsBar tasks={isSpecial ? allTasksList : tasks} />}
 
             <div className="ml-auto flex items-center gap-2 flex-wrap">
               <span className="text-xs font-mono opacity-50 hidden md:block">{user.username}</span>
@@ -392,7 +443,7 @@ export default function App() {
               </button>
               <input ref={importInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
 
-              {activeProject && !isOverall && (
+              {activeProject && !isSpecial && (
                 <>
                   <button onClick={handleAutoArrange}
                     className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-sm"
@@ -424,6 +475,8 @@ export default function App() {
               <span className="text-xs font-mono opacity-40 ml-2 hidden md:block">
                 {isOverall
                   ? 'read-only · scroll to zoom · drag to pan'
+                  : isOverallNotes
+                  ? 'click to expand/collapse · edit notes inline · expanded nodes persist'
                   : 'drag card · drag → to connect · right-click arrow · scroll to zoom · Ctrl+Z/Y undo/redo'}
               </span>
             </div>
@@ -439,7 +492,7 @@ export default function App() {
           </div>
         )}
 
-        {activeProject && !isOverall && loadingBoard && (
+        {activeProject && !isSpecial && loadingBoard && (
           <div className="flex-1 flex items-center justify-center" style={{ background: '#f5f0e8' }}>
             <p className="font-black uppercase tracking-widest animate-pulse opacity-40">Loading…</p>
           </div>
@@ -448,12 +501,21 @@ export default function App() {
         {activeProject && isOverall && (
           <OverallGraph
             key="overall"
-            projects={projects}
+            projects={activeProjects}
             allTasksMap={allTasksMap}
           />
         )}
 
-        {activeProject && !isOverall && !loadingBoard && (
+        {activeProject && isOverallNotes && (
+          <OverallNotes
+            key="overall-notes"
+            projects={activeProjects}
+            allTasksMap={allTasksMap}
+            onSaveNotes={handleSaveNotes}
+          />
+        )}
+
+        {activeProject && !isSpecial && !loadingBoard && (
           <TaskGraph
             key={activeId}
             tasks={tasks} positions={positions}
@@ -470,8 +532,14 @@ export default function App() {
         )}
       </div>
 
-      {showModal && activeProject && !isOverall && (
-        <TaskModal task={editingTask} allTasks={tasks} onSave={handleSave} onClose={closeModal} />
+      {showModal && activeProject && !isSpecial && (
+        <TaskModal
+          task={editingTask}
+          allTasks={tasks}
+          onSave={handleSave}
+          onClose={closeModal}
+          onAttachmentsChange={handleAttachmentsChange}
+        />
       )}
     </div>
   )

@@ -10,20 +10,24 @@ export interface ExpTask {
 
 interface Props {
   projects: Project[]
+  archivedProjects: Project[]
   activeId: string | null
   onSelect: (id: string) => void
   onCreate: (name: string, color: string) => void
   onRename: (id: string, name: string) => void
   onDelete: (id: string) => void
+  onArchive: (id: string) => void
+  onUnarchive: (id: string) => void
   expiringTasks: ExpTask[]
 }
 
-export default function Sidebar({ projects, activeId, onSelect, onCreate, onRename, onDelete, expiringTasks }: Props) {
+export default function Sidebar({ projects, archivedProjects, activeId, onSelect, onCreate, onRename, onDelete, onArchive, onUnarchive, expiringTasks }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(PROJECT_PALETTE[0])
+  const [showArchived, setShowArchived] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -57,6 +61,11 @@ export default function Sidebar({ projects, activeId, onSelect, onCreate, onRena
     e.stopPropagation()
     if (!confirm(`Delete project "${p.name}" and all its tasks?`)) return
     onDelete(p.id)
+  }
+
+  function handleArchiveClick(e: React.MouseEvent, p: Project) {
+    e.stopPropagation()
+    onArchive(p.id)
   }
 
   return (
@@ -125,11 +134,18 @@ export default function Sidebar({ projects, activeId, onSelect, onCreate, onRena
                       {p.taskCount}
                     </span>
                     {!isOverall && (
-                      <button
-                        onClick={e => handleDeleteClick(e, p)}
-                        className={`shrink-0 w-4 h-4 font-black text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-black hover:text-red-700' : 'text-gray-500 hover:text-red-400'}`}
-                        title="Delete project"
-                      >×</button>
+                      <>
+                        <button
+                          onClick={e => handleArchiveClick(e, p)}
+                          className={`shrink-0 w-4 h-4 font-black text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-black hover:text-blue-700' : 'text-gray-500 hover:text-blue-300'}`}
+                          title="Archive project"
+                        >▣</button>
+                        <button
+                          onClick={e => handleDeleteClick(e, p)}
+                          className={`shrink-0 w-4 h-4 font-black text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-black hover:text-red-700' : 'text-gray-500 hover:text-red-400'}`}
+                          title="Delete project"
+                        >×</button>
+                      </>
                     )}
                   </>
                 )}
@@ -173,6 +189,43 @@ export default function Sidebar({ projects, activeId, onSelect, onCreate, onRena
                 className="text-yellow-300 font-black text-xs hover:text-white"
               >✓</button>
             </div>
+          </div>
+        )}
+
+        {/* Archived section */}
+        {archivedProjects.length > 0 && (
+          <div className="border-t-4 border-black mt-2">
+            <button
+              onClick={() => setShowArchived(v => !v)}
+              className="w-full flex items-center gap-1 px-3 pt-3 pb-1 text-left"
+            >
+              <span className="text-gray-500 font-black text-xs uppercase tracking-widest">
+                {showArchived ? '▾' : '▸'} Archived
+              </span>
+              <span className="text-gray-600 font-mono text-xs ml-auto">{archivedProjects.length}</span>
+            </button>
+            {showArchived && archivedProjects.map(p => (
+              <div
+                key={p.id}
+                className="group mx-2 mb-1 flex items-center gap-2 px-2 py-2"
+                style={{ borderLeft: `4px solid ${p.color}`, background: 'rgba(255,255,255,0.03)' }}
+              >
+                <span className="flex-1 font-black text-xs uppercase tracking-wide truncate text-gray-400">
+                  {p.name}
+                </span>
+                <span className="text-xs font-mono shrink-0 text-gray-600">{p.taskCount}</span>
+                <button
+                  onClick={() => onUnarchive(p.id)}
+                  className="shrink-0 text-xs font-black uppercase tracking-wider text-yellow-300 border-2 border-yellow-300 px-1.5 py-0.5 hover:bg-yellow-300 hover:text-black transition-colors"
+                  title="Restore project"
+                >Restore</button>
+                <button
+                  onClick={e => handleDeleteClick(e, p)}
+                  className="shrink-0 w-4 h-4 font-black text-xs flex items-center justify-center text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete project"
+                >×</button>
+              </div>
+            ))}
           </div>
         )}
 
