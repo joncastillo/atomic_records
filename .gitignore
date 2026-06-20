@@ -3,5 +3,6 @@ dist/
 data/
 .env
 *.local
-.claude/
+.claude/*
+!.claude/settings.json
 .idea/
