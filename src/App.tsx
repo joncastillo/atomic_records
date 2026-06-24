@@ -468,7 +468,7 @@ export default function App() {
 
         {headerVisible && (
           <header className="shrink-0 border-b-4 border-black z-30 relative"
-            style={{ background: activeProject ? activeProject.color : '#FFE500' }}>
+            style={{ background: activeProject ? activeProject.color : '#FFE500', paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setSidebarOpen(true)}

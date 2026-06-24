@@ -529,7 +529,7 @@ export default function OverallGraph({ projects, allTasksMap }: Props) {
         </div>
 
         {/* ── Controls (always on top) ── */}
-        <div className="absolute bottom-4 right-4 z-30 flex flex-col gap-1.5">
+        <div className="absolute right-4 z-30 flex flex-col gap-1.5" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {([
             ['+', () => setZoomSync(Math.min(MAX_ZOOM, +(zoomRef.current * 1.2).toFixed(3)))],
             ['−', () => setZoomSync(Math.max(MIN_ZOOM, +(zoomRef.current * 0.8).toFixed(3)))],
@@ -543,8 +543,8 @@ export default function OverallGraph({ projects, allTasksMap }: Props) {
           ))}
         </div>
 
-        <div className="absolute bottom-4 left-4 z-30 bg-white border-4 border-black px-3 py-1 pointer-events-none"
-          style={{ boxShadow: '4px 4px 0 #000' }}>
+        <div className="absolute left-4 z-30 bg-white border-4 border-black px-3 py-1 pointer-events-none"
+          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))', boxShadow: '4px 4px 0 #000' }}>
           <span className="text-xs font-black uppercase tracking-widest opacity-60">{Math.round(zoom * 100)}%</span>
         </div>
       </div>

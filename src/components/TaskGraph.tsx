@@ -335,7 +335,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
         )}
 
         {/* Undo / redo */}
-        <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-1.5">
+        <div className="absolute right-4 z-20 flex flex-col gap-1.5" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {([
             ['⟲', onUndo, 'Undo (Ctrl+Z)'],
             ['⟳', onRedo, 'Redo (Ctrl+Y)'],
@@ -363,7 +363,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
           ))}
         </div>
 
-        <div className="absolute bottom-4 left-4 z-20 bg-white border-4 border-black px-3 py-1 pointer-events-none" style={{ boxShadow: '4px 4px 0 #000' }}>
+        <div className="absolute left-4 z-20 bg-white border-4 border-black px-3 py-1 pointer-events-none" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))', boxShadow: '4px 4px 0 #000' }}>
           <span className="text-xs font-black uppercase tracking-widest opacity-60">{Math.round(zoom * 100)}%</span>
         </div>
 
