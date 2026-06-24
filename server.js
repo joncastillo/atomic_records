@@ -452,7 +452,7 @@ try {
   if (!fs.existsSync(join(DATA_DIR, 'cert.pem')) || !fs.existsSync(join(DATA_DIR, 'key.pem'))) {
     console.log('[server] Generating SSL certificate via OpenSSL...')
     const sanList = ips.map(ip => `IP:${ip}`).join(',') + ',DNS:localhost'
-    execSync(`openssl req -x509 -sha256 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'key.pem')} -out ${join(DATA_DIR, 'cert.pem')} -days 365 -nodes -subj "/CN=192.168.50.199" -addext "subjectAltName=${sanList}" -addext "extendedKeyUsage=serverAuth" -addext "keyUsage=digitalSignature,keyEncipherment"`)
+    execSync(`openssl req -x509 -sha256 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'key.pem')} -out ${join(DATA_DIR, 'cert.pem')} -days 365 -nodes -subj "/CN=192.168.50.199" -addext "subjectAltName=${sanList}" -addext "extendedKeyUsage=serverAuth" -addext "keyUsage=digitalSignature,keyEncipherment" -addext "basicConstraints=CA:FALSE"`)
   }
 
   const privateKey = fs.readFileSync(join(DATA_DIR, 'key.pem'), 'utf8')
