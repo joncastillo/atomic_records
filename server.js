@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { mkdirSync } from 'fs'
 import { scryptSync, randomBytes, timingSafeEqual } from 'crypto'
+import { networkInterfaces } from 'os'
 import http from 'http'
 import https from 'https'
 import selfsigned from 'selfsigned'
@@ -439,8 +440,29 @@ const HTTPS_PORT = process.env.HTTPS_PORT ?? 3211
 http.createServer(app).listen(PORT, () => console.log(`[server] HTTP on port ${PORT}`))
 
 try {
-  const attrs = [{ name: 'commonName', value: 'atomic-records' }]
-  const pems = selfsigned.generate(attrs, { days: 365 })
+  const ips = ['127.0.0.1']
+  const nets = networkInterfaces()
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) ips.push(net.address)
+    }
+  }
+
+  const attrs = [{ name: 'commonName', value: ips[1] || 'localhost' }]
+  const pems = selfsigned.generate(attrs, {
+    days: 365,
+    keySize: 2048,
+    extensions: [
+      { name: 'basicConstraints', cA: true },
+      {
+        name: 'subjectAltName',
+        altNames: [
+          { type: 2, value: 'localhost' },
+          ...ips.map(ip => ({ type: 7, ip }))
+        ]
+      }
+    ]
+  })
   https.createServer({ key: pems.private, cert: pems.cert }, app).listen(HTTPS_PORT, () => console.log(`[server] HTTPS on port ${HTTPS_PORT}`))
 } catch (e) {
   console.error('[server] Failed to start HTTPS server:', e)
