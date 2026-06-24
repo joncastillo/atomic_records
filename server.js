@@ -433,6 +433,10 @@ app.post('/api/import', (req, res) => {
 })
 
 // ── SPA fallback ──────────────────────────────────────────
+app.get('/cert.pem', (req, res) => {
+  res.download(join(DATA_DIR, 'cert.pem'), 'cert.pem')
+})
+
 app.get('*', (_req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
 
 const PORT = process.env.PORT ?? 3210
