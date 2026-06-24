@@ -2,7 +2,7 @@
 DEVICE=joncastillo@192.168.50.199
 REMOTE=/mnt/sda/opt/dev_atomic_records
 
-rsync -az --no-group --no-times --inplace \
+rsync -az --no-perms --no-owner --no-group --no-times --inplace \
   --exclude node_modules --exclude dist --exclude .git --exclude env --exclude data \
   ./ $DEVICE:$REMOTE/
 
