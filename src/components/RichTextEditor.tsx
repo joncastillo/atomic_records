@@ -19,8 +19,13 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const quillRef = useRef<ReactQuill>(null)
 
   useEffect(() => {
-    if (autoFocus && quillRef.current) {
-      quillRef.current.focus()
+    if (quillRef.current) {
+      if (autoFocus) {
+        quillRef.current.focus()
+      }
+      const editor = quillRef.current.getEditor().root
+      editor.setAttribute('spellcheck', 'false')
+      editor.setAttribute('autocorrect', 'off')
     }
   }, [autoFocus])
 
@@ -61,7 +66,6 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       modules={modules}
       placeholder={placeholder}
       className={className}
-      spellCheck={false}
     />
   )
 }
