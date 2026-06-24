@@ -34,3 +34,10 @@ body {
 .ql-editor {
   min-height: 100%;
 }
+
+@keyframes ants {
+  to { stroke-dashoffset: -20; }
+}
+.animate-ants {
+  animation: ants 0.4s linear infinite;
+}

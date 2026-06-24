@@ -206,7 +206,8 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
         longPressTimerRef.current = setTimeout(() => {
           setDrag(prev => {
             if (prev?.kind === 'pending-card' && prev.taskId === taskId) {
-               return { kind: 'card', taskId, startMX: prev.startMX, startMY: prev.startMY, startCX: prev.startCX, startCY: prev.startCY }
+              if (navigator.vibrate) navigator.vibrate(50)
+              return { kind: 'card', taskId, startMX: prev.startMX, startMY: prev.startMY, startCX: prev.startCX, startCY: prev.startCY }
             }
             return prev
           })
@@ -436,6 +437,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
                   task={task} index={i}
                   isConnectTarget={connectPreview !== null && hoveredCard === task.id && hoveredCard !== connectPreview.fromId}
                   isConnectSource={connectPreview?.fromId === task.id}
+                  isDragging={drag?.kind === 'card' && drag.taskId === task.id}
                   onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onNoteClick={onNoteClick}
                 />
               </div>

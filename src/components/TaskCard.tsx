@@ -12,6 +12,7 @@ interface Props {
   onToggle: (id: string) => void
   onNoteClick?: (task: Task) => void
   readOnly?: boolean
+  isDragging?: boolean
 }
 
 const STATUS: Record<TaskStatus, { card: string; badge: string; badgeText: string }> = {
@@ -32,7 +33,7 @@ const STATUS: Record<TaskStatus, { card: string; badge: string; badgeText: strin
   },
 }
 
-export default function TaskCard({ task, index, isConnectTarget, isConnectSource, onEdit, onDelete, onToggle, onNoteClick, readOnly }: Props) {
+export default function TaskCard({ task, index, isConnectTarget, isConnectSource, onEdit, onDelete, onToggle, onNoteClick, readOnly, isDragging }: Props) {
   const status = getTaskStatus(task)
   const s = STATUS[status]
 
@@ -46,6 +47,13 @@ export default function TaskCard({ task, index, isConnectTarget, isConnectSource
       className={`border-4 ${s.card} flex flex-col select-none relative ${outlineStyle}`}
       style={{ width: CARD_W, boxShadow: '6px 6px 0 #000' }}
     >
+      {/* Dragging indicator overlay */}
+      {isDragging && (
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 100 }}>
+          <rect width="100%" height="100%" fill="none" stroke="black" strokeWidth="6" strokeDasharray="8 8" className="animate-ants" />
+        </svg>
+      )}
+
       {/* Label colour strip */}
       {task.labelColor && (
         <div className="h-2 w-full border-b-2 border-black shrink-0" style={{ background: task.labelColor }} />
