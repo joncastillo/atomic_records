@@ -458,7 +458,7 @@ try {
     const sanList = ips.map(ip => `IP:${ip}`).join(',') + ',DNS:localhost'
     
     // 1. Generate Root CA
-    execSync(`openssl req -x509 -sha256 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'rootCA.key')} -out ${join(DATA_DIR, 'rootCA.pem')} -days 3650 -nodes -subj "/CN=Atomic Records Local CA" -addext "basicConstraints=critical,CA:TRUE"`)
+    execSync(`openssl req -x509 -sha256 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'rootCA.key')} -out ${join(DATA_DIR, 'rootCA.pem')} -days 3650 -nodes -subj "/CN=Atomic Records Local CA" -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"`)
     
     // 2. Generate Leaf CSR and Key
     execSync(`openssl req -new -newkey rsa:2048 -keyout ${join(DATA_DIR, 'key.pem')} -out ${join(DATA_DIR, 'server.csr')} -nodes -subj "/CN=192.168.50.199"`)
