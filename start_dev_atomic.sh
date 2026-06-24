@@ -3,6 +3,9 @@ REMOTE=/mnt/sda/opt/dev_atomic_records
 
 cd $REMOTE
 
+# Remove old/broken certs to force regeneration
+rm -f data/cert.pem data/key.pem
+
 docker build -t dev_atomic_records .
 
 docker run -d \
