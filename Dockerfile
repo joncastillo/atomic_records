@@ -8,6 +8,7 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache openssl
 # Copy node_modules (includes compiled better-sqlite3 for alpine/musl)
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist

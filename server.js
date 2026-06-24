@@ -5,9 +5,10 @@ import { dirname, join } from 'path'
 import { mkdirSync } from 'fs'
 import { scryptSync, randomBytes, timingSafeEqual } from 'crypto'
 import { networkInterfaces } from 'os'
+import { execSync } from 'child_process'
+import fs from 'fs'
 import http from 'http'
 import https from 'https'
-import selfsigned from 'selfsigned'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, 'data')
@@ -448,22 +449,16 @@ try {
     }
   }
 
-  const attrs = [{ name: 'commonName', value: ips[1] || 'localhost' }]
-  const pems = selfsigned.generate(attrs, {
-    days: 365,
-    keySize: 2048,
-    extensions: [
-      { name: 'basicConstraints', cA: true },
-      {
-        name: 'subjectAltName',
-        altNames: [
-          { type: 2, value: 'localhost' },
-          ...ips.map(ip => ({ type: 7, ip }))
-        ]
-      }
-    ]
-  })
-  https.createServer({ key: pems.private, cert: pems.cert }, app).listen(HTTPS_PORT, () => console.log(`[server] HTTPS on port ${HTTPS_PORT}`))
+  if (!fs.existsSync(join(DATA_DIR, 'cert.pem')) || !fs.existsSync(join(DATA_DIR, 'key.pem'))) {
+    console.log('[server] Generating SSL certificate via OpenSSL...')
+    const sanList = ips.map(ip => `IP:${ip}`).join(',') + ',DNS:localhost'
+    execSync(`openssl req -x509 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'key.pem')} -out ${join(DATA_DIR, 'cert.pem')} -days 365 -nodes -subj "/CN=192.168.50.199" -addext "subjectAltName=${sanList}"`)
+  }
+
+  const privateKey = fs.readFileSync(join(DATA_DIR, 'key.pem'), 'utf8')
+  const certificate = fs.readFileSync(join(DATA_DIR, 'cert.pem'), 'utf8')
+
+  https.createServer({ key: privateKey, cert: certificate }, app).listen(HTTPS_PORT, () => console.log(`[server] HTTPS on port ${HTTPS_PORT}`))
 } catch (e) {
   console.error('[server] Failed to start HTTPS server:', e)
 }
