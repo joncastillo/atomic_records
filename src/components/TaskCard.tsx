@@ -98,9 +98,11 @@ export default function TaskCard({ task, index, isConnectTarget, isConnectSource
             Notes {!readOnly && <span className="opacity-0 group-hover:opacity-100 transition-opacity">✎</span>}
           </p>
           {task.notes ? (
-            <p className="text-xs text-gray-700 font-mono leading-relaxed whitespace-pre-wrap break-words">
-              {task.notes}
-            </p>
+            <div 
+              className="text-xs text-gray-700 font-mono leading-relaxed whitespace-pre-wrap break-words ql-editor px-0 py-1"
+              style={{ minHeight: 'auto', padding: 0 }}
+              dangerouslySetInnerHTML={{ __html: task.notes }}
+            />
           ) : (
             <p className="text-xs text-gray-400 font-mono italic">Click to add notes...</p>
           )}

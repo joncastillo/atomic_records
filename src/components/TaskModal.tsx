@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Task, Attachment, today, LABEL_PALETTE, formatBytes } from '../types'
 import { api, downloadAttachment, fileToBase64 } from '../api'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 
 interface Props {
   task?: Task | null
@@ -174,14 +176,24 @@ export default function TaskModal({ task, allTasks, onSave, onClose, onAttachmen
               Notes
               <span className="opacity-40 ml-2 normal-case">(running notes / context)</span>
             </label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Add notes…"
-              rows={4}
-              className="w-full px-3 py-2 font-mono text-sm focus:outline-none focus:bg-yellow-50 bg-white resize-y"
-              style={{ border: '3px solid black' }}
-            />
+            <div className="bg-white border-black" style={{ border: '3px solid black', minHeight: 120 }}>
+              <ReactQuill
+                theme="snow"
+                value={notes}
+                onChange={setNotes}
+                modules={{
+                  toolbar: [
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }, { 'font': [] }, { 'size': [] }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{'list': 'ordered'}, {'list': 'bullet'}],
+                    ['link', 'clean']
+                  ],
+                }}
+                placeholder="Add notes…"
+                className="w-full font-mono text-sm"
+              />
+            </div>
           </div>
 
           {/* Dates */}

@@ -21,6 +21,7 @@ interface Props {
 type DragKind =
   | { kind: 'pan'; startMX: number; startMY: number; startPX: number; startPY: number }
   | { kind: 'card'; taskId: string; startMX: number; startMY: number; startCX: number; startCY: number }
+  | { kind: 'pending-card'; taskId: string; startMX: number; startMY: number; startPX: number; startPY: number; startCX: number; startCY: number }
   | { kind: 'connect'; fromId: string }
 
 interface ConnectPreview { fromId: string; curX: number; curY: number }
@@ -57,6 +58,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
     startPan: { x: number, y: number },
     startC: { x: number, y: number }
   } | null>(null)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Measure all card heights after tasks update (covers add/edit/delete)
   useEffect(() => {
@@ -198,7 +200,17 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
       if (cardEl) {
         const taskId = cardEl.dataset.card!
         const pos = positions[taskId] ?? { x: 60, y: 60 }
-        setDrag({ kind: 'card', taskId, startMX: t.clientX, startMY: t.clientY, startCX: pos.x, startCY: pos.y })
+        setDrag({ kind: 'pending-card', taskId, startMX: t.clientX, startMY: t.clientY, startPX: panRef.current.x, startPY: panRef.current.y, startCX: pos.x, startCY: pos.y })
+        
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = setTimeout(() => {
+          setDrag(prev => {
+            if (prev?.kind === 'pending-card' && prev.taskId === taskId) {
+               return { kind: 'card', taskId, startMX: prev.startMX, startMY: prev.startMY, startCX: prev.startCX, startCY: prev.startCY }
+            }
+            return prev
+          })
+        }, 500)
         return
       }
 
@@ -243,6 +255,14 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
         const dx = (t.clientX - drag.startMX) / zoomRef.current
         const dy = (t.clientY - drag.startMY) / zoomRef.current
         setDraggingPos({ taskId: drag.taskId, x: drag.startCX + dx, y: drag.startCY + dy })
+      } else if (drag.kind === 'pending-card') {
+        const dist = Math.hypot(t.clientX - drag.startMX, t.clientY - drag.startMY)
+        if (dist > 10) {
+          if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+          const next = { x: drag.startPX + (t.clientX - drag.startMX), y: drag.startPY + (t.clientY - drag.startMY) }
+          panRef.current = next; setPan(next)
+          setDrag({ kind: 'pan', startMX: drag.startMX, startMY: drag.startMY, startPX: drag.startPX, startPY: drag.startPY })
+        }
       } else if (drag.kind === 'connect') {
         const g = screenToGraph(t.clientX, t.clientY)
         setConnectPreview({ fromId: drag.fromId, curX: g.x, curY: g.y })
@@ -256,10 +276,11 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
       touchRef.current = null
     }
     if (e.touches.length === 0 && drag) {
-      if (drag.kind === 'card') {
+      if (drag.kind === 'pending-card') {
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+      } else if (drag.kind === 'card') {
         setDraggingPos(prev => { if (prev) onTaskMove(prev.taskId, prev.x, prev.y); return null })
-      }
-      if (drag.kind === 'connect') {
+      } else if (drag.kind === 'connect') {
         const t = e.changedTouches[0]
         const g = screenToGraph(t.clientX, t.clientY)
         const targetId = findCardAt(g.x, g.y, tasks, positions, cardHeightsRef.current)

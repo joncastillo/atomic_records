@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Task, Project, getTaskStatus, TaskStatus } from '../types'
 import { downloadAttachment } from '../api'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 
 interface Props {
   projects: Project[]
@@ -162,15 +164,23 @@ export default function OverallNotes({ projects, allTasksMap, onSaveNotes }: Pro
                               </div>
                               {isEditing ? (
                                 <div>
-                                  <textarea
-                                    value={draft}
-                                    onChange={e => setDraft(e.target.value)}
-                                    rows={4}
-                                    autoFocus
-                                    className="w-full px-2 py-1.5 font-mono text-xs bg-white resize-y focus:outline-none focus:bg-yellow-50"
-                                    style={{ border: '3px solid black' }}
-                                  />
-                                  <div className="flex gap-2 mt-1">
+                                  <div className="bg-white border-4 border-black" style={{ minHeight: 150 }}>
+                                    <ReactQuill
+                                      theme="snow"
+                                      value={draft}
+                                      onChange={setDraft}
+                                      modules={{
+                                        toolbar: [
+                                          [{ 'header': [1, 2, 3, 4, 5, 6, false] }, { 'font': [] }, { 'size': [] }],
+                                          [{ 'color': [] }, { 'background': [] }],
+                                          ['bold', 'italic', 'underline', 'strike'],
+                                          [{'list': 'ordered'}, {'list': 'bullet'}],
+                                          ['link', 'clean']
+                                        ],
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 mt-2">
                                     <button
                                       onClick={() => saveEdit(task, p.id)}
                                       className="bg-black text-yellow-300 font-black uppercase tracking-wider text-xs px-3 py-1 border-2 border-black hover:bg-yellow-300 hover:text-black transition-colors"
@@ -182,7 +192,11 @@ export default function OverallNotes({ projects, allTasksMap, onSaveNotes }: Pro
                                   </div>
                                 </div>
                               ) : task.notes ? (
-                                <p className="text-xs text-gray-800 font-mono whitespace-pre-wrap break-words border-l-4 border-black pl-2">{task.notes}</p>
+                                <div 
+                                  className="text-xs text-gray-800 font-mono whitespace-pre-wrap break-words border-l-4 border-black pl-2 ql-editor px-0 py-1"
+                                  style={{ minHeight: 'auto' }}
+                                  dangerouslySetInnerHTML={{ __html: task.notes }}
+                                />
                               ) : (
                                 <p className="text-xs font-mono opacity-30 italic">No notes yet.</p>
                               )}
