@@ -376,10 +376,10 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
         <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: maxX, height: maxY, position: 'absolute', top: 0, left: 0 }}>
           <svg style={{ position: 'absolute', top: 0, left: 0, width: maxX, height: maxY, pointerEvents: 'none', overflow: 'visible' }}>
             {tasks.flatMap(task =>
-              task.dependsOn.filter(depId => positions[depId]).map(depId => {
+              task.dependsOn.filter(depId => positions[depId] && tasks.some(t => t.id === depId)).map(depId => {
                 const key = `${depId}->${task.id}`
                 const isHovered = hoveredArrow === key
-                const fromTask = tasks.find(t => t.id === depId)
+                const fromTask = tasks.find(t => t.id === depId)!
                 const edgeColor = fromTask?.labelColor || '#000'
                 const strokeColor = isHovered ? '#d97706' : edgeColor
                 const from = effectivePos(depId)

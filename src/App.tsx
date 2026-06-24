@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
-  Task, Project, Attachment, today,
+  Task, Project, Attachment, today, getTaskStatus,
   OVERALL_PROJECT_ID, OVERALL_PROJECT,
   OVERALL_NOTES_PROJECT_ID, OVERALL_NOTES_PROJECT,
 } from './types'
@@ -36,6 +36,7 @@ export default function App() {
   const [editingNotesTask, setEditingNotesTask] = useState<Task | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(true)
+  const [filters, setFilters] = useState({ PENDING: true, DONE: true, OVERDUE: true })
 
   // Cross-project task cache for Overall view and expiring list
   const [allTasksMap, setAllTasksMap] = useState<Record<string, Task[]>>({})
@@ -382,6 +383,30 @@ export default function App() {
     return result
   }, [allTasksMap, activeProjects])
 
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(t => {
+      const status = getTaskStatus(t)
+      if (status === 'pending' && !filters.PENDING) return false
+      if (status === 'completed' && !filters.DONE) return false
+      if (status === 'overdue' && !filters.OVERDUE) return false
+      return true
+    })
+  }, [tasks, filters])
+
+  const filteredAllTasksMap = useMemo(() => {
+    const map: Record<string, Task[]> = {}
+    for (const [pid, list] of Object.entries(allTasksMap)) {
+      map[pid] = list.filter(t => {
+        const status = getTaskStatus(t)
+        if (status === 'pending' && !filters.PENDING) return false
+        if (status === 'completed' && !filters.DONE) return false
+        if (status === 'overdue' && !filters.OVERDUE) return false
+        return true
+      })
+    }
+    return map
+  }, [allTasksMap, filters])
+
   if (authChecking) {
     return (
       <div className="h-screen flex items-center justify-center bg-yellow-300">
@@ -463,7 +488,20 @@ export default function App() {
               </p>
             </div>
 
-            {activeProject && <StatsBar tasks={isSpecial ? allTasksList : tasks} />}
+            {activeProject && (
+              <StatsBar
+                tasks={isSpecial ? allTasksList : tasks}
+                filters={filters}
+                onToggle={key => {
+                  if (key === 'TOTAL') {
+                    const allOn = filters.PENDING && filters.DONE && filters.OVERDUE
+                    setFilters({ PENDING: !allOn, DONE: !allOn, OVERDUE: !allOn })
+                  } else {
+                    setFilters(prev => ({ ...prev, [key as keyof typeof filters]: !prev[key as keyof typeof filters] }))
+                  }
+                }}
+              />
+            )}
 
             <div className="ml-auto flex items-center gap-2 flex-wrap">
               <span className="text-xs font-mono opacity-50 hidden md:block">{user.username}</span>
@@ -544,7 +582,7 @@ export default function App() {
           <OverallGraph
             key="overall"
             projects={activeProjects}
-            allTasksMap={allTasksMap}
+            allTasksMap={filteredAllTasksMap}
           />
         )}
 
@@ -552,7 +590,7 @@ export default function App() {
           <OverallNotes
             key="overall-notes"
             projects={activeProjects}
-            allTasksMap={allTasksMap}
+            allTasksMap={filteredAllTasksMap}
             onSaveNotes={handleSaveNotes}
           />
         )}
@@ -560,7 +598,7 @@ export default function App() {
         {activeProject && !isSpecial && !loadingBoard && (
           <TaskGraph
             key={activeId}
-            tasks={tasks} positions={positions}
+            tasks={filteredTasks} positions={positions}
             onTaskMove={handleTaskMove}
             onConnect={handleConnect}
             onDisconnect={handleDisconnect}
