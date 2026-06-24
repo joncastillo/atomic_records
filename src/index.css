@@ -41,3 +41,30 @@ body {
 .animate-ants {
   animation: ants 0.4s linear infinite;
 }
+
+/* Custom Quill Fonts */
+.ql-font-space-mono { font-family: 'Space Mono', monospace; }
+.ql-font-inter { font-family: 'Inter', sans-serif; }
+.ql-font-merriweather { font-family: 'Merriweather', serif; }
+.ql-font-comic-sans { font-family: 'Comic Sans MS', 'Comic Sans', cursive; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label:not([data-value])::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item:not([data-value])::before {
+  content: 'Space Mono';
+  font-family: 'Space Mono', monospace;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="inter"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="inter"]::before {
+  content: 'Inter';
+  font-family: 'Inter', sans-serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="merriweather"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="merriweather"]::before {
+  content: 'Merriweather';
+  font-family: 'Merriweather', serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="comic-sans"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="comic-sans"]::before {
+  content: 'Comic Sans';
+  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
+}
