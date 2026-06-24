@@ -14,6 +14,14 @@
     <title>ATOMIC RECORDS — Task Manager</title>
   </head>
   <body>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        alert("Error: " + msg + "\nLine: " + line);
+      };
+      window.addEventListener("unhandledrejection", function(e) {
+        alert("Unhandled Promise: " + e.reason);
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
