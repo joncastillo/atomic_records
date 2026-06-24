@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Task, Project, getTaskStatus, TaskStatus } from '../types'
 import { downloadAttachment } from '../api'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import RichTextEditor from './RichTextEditor'
 
 interface Props {
   projects: Project[]
@@ -165,19 +164,10 @@ export default function OverallNotes({ projects, allTasksMap, onSaveNotes }: Pro
                               {isEditing ? (
                                 <div>
                                   <div className="bg-white border-4 border-black" style={{ minHeight: 150 }}>
-                                    <ReactQuill
-                                      theme="snow"
+                                    <RichTextEditor
                                       value={draft}
                                       onChange={setDraft}
-                                      modules={{
-                                        toolbar: [
-                                          [{ 'header': [1, 2, 3, 4, 5, 6, false] }, { 'font': [] }, { 'size': [] }],
-                                          [{ 'color': [] }, { 'background': [] }],
-                                          ['bold', 'italic', 'underline', 'strike'],
-                                          [{'list': 'ordered'}, {'list': 'bullet'}],
-                                          ['link', 'clean']
-                                        ],
-                                      }}
+                                      autoFocus
                                     />
                                   </div>
                                   <div className="flex gap-2 mt-2">

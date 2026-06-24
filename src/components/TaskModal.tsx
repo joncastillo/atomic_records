@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Task, Attachment, today, LABEL_PALETTE, formatBytes } from '../types'
 import { api, downloadAttachment, fileToBase64 } from '../api'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import RichTextEditor from './RichTextEditor'
 
 interface Props {
   task?: Task | null
@@ -177,19 +176,9 @@ export default function TaskModal({ task, allTasks, onSave, onClose, onAttachmen
               <span className="opacity-40 ml-2 normal-case">(running notes / context)</span>
             </label>
             <div className="bg-white border-black" style={{ border: '3px solid black', minHeight: 120 }}>
-              <ReactQuill
-                theme="snow"
+              <RichTextEditor
                 value={notes}
                 onChange={setNotes}
-                modules={{
-                  toolbar: [
-                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }, { 'font': [] }, { 'size': [] }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{'list': 'ordered'}, {'list': 'bullet'}],
-                    ['link', 'clean']
-                  ],
-                }}
                 placeholder="Add notes…"
                 className="w-full font-mono text-sm"
               />

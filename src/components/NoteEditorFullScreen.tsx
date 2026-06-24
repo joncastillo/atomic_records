@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Task } from '../types'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import RichTextEditor from './RichTextEditor'
 
 interface Props {
   task: Task
@@ -37,15 +36,6 @@ export default function NoteEditorFullScreen({ task, onSave, onClose }: Props) {
     }
   }
 
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }, { 'font': [] }, { 'size': [] }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{'list': 'ordered'}, {'list': 'bullet'}],
-      ['link', 'clean']
-    ],
-  }
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white overflow-hidden">
@@ -76,13 +66,12 @@ export default function NoteEditorFullScreen({ task, onSave, onClose }: Props) {
       {/* Editor Body */}
       <div className="flex-1 flex flex-col p-4 md:p-8 bg-[#f5f0e8] overflow-hidden" onKeyDown={handleKeyDown}>
         <div className="flex-1 bg-white border-4 border-black flex flex-col overflow-hidden relative" style={{ boxShadow: '8px 8px 0 #000' }}>
-          <ReactQuill
-            theme="snow"
+          <RichTextEditor
             value={notes}
             onChange={setNotes}
-            modules={modules}
             placeholder="Type your notes here... (Ctrl+S to save, Esc to cancel)"
             className="flex-1 flex flex-col h-full"
+            autoFocus
           />
         </div>
       </div>
