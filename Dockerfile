@@ -14,4 +14,5 @@ COPY --from=builder /app/dist ./dist
 COPY server.js package.json ./
 VOLUME ["/app/data"]
 EXPOSE 3210
+EXPOSE 3211
 CMD ["node", "server.js"]

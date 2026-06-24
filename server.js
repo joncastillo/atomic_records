@@ -4,6 +4,9 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { mkdirSync } from 'fs'
 import { scryptSync, randomBytes, timingSafeEqual } from 'crypto'
+import http from 'http'
+import https from 'https'
+import selfsigned from 'selfsigned'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, 'data')
@@ -431,4 +434,14 @@ app.post('/api/import', (req, res) => {
 app.get('*', (_req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
 
 const PORT = process.env.PORT ?? 3210
-app.listen(PORT, () => console.log(`[server] http://localhost:${PORT}`))
+const HTTPS_PORT = process.env.HTTPS_PORT ?? 3211
+
+http.createServer(app).listen(PORT, () => console.log(`[server] HTTP on port ${PORT}`))
+
+try {
+  const attrs = [{ name: 'commonName', value: 'atomic-records' }]
+  const pems = selfsigned.generate(attrs, { days: 365 })
+  https.createServer({ key: pems.private, cert: pems.cert }, app).listen(HTTPS_PORT, () => console.log(`[server] HTTPS on port ${HTTPS_PORT}`))
+} catch (e) {
+  console.error('[server] Failed to start HTTPS server:', e)
+}
