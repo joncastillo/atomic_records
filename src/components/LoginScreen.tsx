@@ -31,7 +31,7 @@ export default function LoginScreen({ needsSetup, onAuth }: Props) {
   }
 
   return (
-    <div className="h-screen flex items-center justify-center" style={{ background: '#FFE500' }}>
+    <div className="h-screen flex items-center justify-center p-4" style={{ background: '#FFE500' }}>
       <div className="bg-white border-4 border-black p-8 w-full max-w-sm" style={{ boxShadow: '8px 8px 0 #000' }}>
         <div className="mb-6">
           <h1 className="text-2xl font-black uppercase tracking-widest">◈ ATOMIC</h1>

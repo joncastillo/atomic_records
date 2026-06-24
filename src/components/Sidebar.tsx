@@ -70,7 +70,7 @@ export default function Sidebar({ projects, archivedProjects, activeId, onSelect
 
   return (
     <aside
-      className="flex flex-col shrink-0 border-r-4 border-black overflow-hidden"
+      className="flex flex-col shrink-0 border-r-4 border-black overflow-hidden h-full"
       style={{ width: 220, background: '#111', minHeight: 0 }}
     >
       {/* Brand */}

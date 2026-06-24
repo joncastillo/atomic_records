@@ -113,6 +113,13 @@ export default function OverallGraph({ projects, allTasksMap }: Props) {
   const setZoomSync = useCallback((v: number) => { zoomRef.current = v; setZoom(v) }, [])
   const setPanSync  = useCallback((v: { x: number; y: number }) => { panRef.current = v; setPan(v) }, [])
 
+  const touchRef = useRef<{
+    startDist: number,
+    startZoom: number,
+    startPan: { x: number, y: number },
+    startC: { x: number, y: number }
+  } | null>(null)
+
   // Measure card heights; converges after 1 extra render
   useLayoutEffect(() => {
     const heights: Record<string, number> = {}
@@ -182,6 +189,68 @@ export default function OverallGraph({ projects, allTasksMap }: Props) {
     setDragging({ startMX: e.clientX, startMY: e.clientY, startPX: panRef.current.x, startPY: panRef.current.y })
   }
 
+  function onTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
+      const startDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+      const cx = (t1.clientX + t2.clientX) / 2
+      const cy = (t1.clientY + t2.clientY) / 2
+      touchRef.current = { startDist, startZoom: zoomRef.current, startPan: { ...panRef.current }, startC: { x: cx, y: cy } }
+      setCtxMenu(null)
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0]
+      setCtxMenu(null)
+      const target = t.target as HTMLElement
+      if (target.closest('button') || target.closest('input')) return
+      setDragging({ startMX: t.clientX, startMY: t.clientY, startPX: panRef.current.x, startPY: panRef.current.y })
+    }
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (e.touches.length === 2 && touchRef.current) {
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+      const scale = dist / touchRef.current.startDist
+      const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, touchRef.current.startZoom * scale))
+      zoomRef.current = nextZoom
+      setZoom(nextZoom)
+
+      const cx = (t1.clientX + t2.clientX) / 2
+      const cy = (t1.clientY + t2.clientY) / 2
+
+      const dx = cx - touchRef.current.startC.x
+      const dy = cy - touchRef.current.startC.y
+
+      const rect = containerRef.current!.getBoundingClientRect()
+      const mx = touchRef.current.startC.x - rect.left
+      const my = touchRef.current.startC.y - rect.top
+
+      const p = touchRef.current.startPan
+      const nextPanX = mx - (mx - p.x) * (nextZoom / touchRef.current.startZoom) + dx
+      const nextPanY = my - (my - p.y) * (nextZoom / touchRef.current.startZoom) + dy
+
+      panRef.current = { x: nextPanX, y: nextPanY }
+      setPan(panRef.current)
+
+      if (dragging) setDragging(null)
+    } else if (e.touches.length === 1 && dragging) {
+      const t = e.touches[0]
+      const next = { x: dragging.startPX + (t.clientX - dragging.startMX), y: dragging.startPY + (t.clientY - dragging.startMY) }
+      panRef.current = next; setPan(next)
+    }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length < 2) {
+      touchRef.current = null
+    }
+    if (e.touches.length === 0 && dragging) {
+      setDragging(null)
+    }
+  }
+
   const allTasks: TaskWithProject[] = []
   projects.forEach(p => {
     ;(allTasksMap[p.id] ?? []).forEach(t => allTasks.push({ task: t, projectId: p.id }))
@@ -221,8 +290,12 @@ export default function OverallGraph({ projects, allTasksMap }: Props) {
           cursor: dragging ? 'grabbing' : 'default',
           userSelect: 'none',
           minHeight: 0,
+          touchAction: 'none'
         }}
         onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         onClick={() => setCtxMenu(null)}
       >
 

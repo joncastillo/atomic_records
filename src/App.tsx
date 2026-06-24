@@ -32,6 +32,7 @@ export default function App() {
   const [loadingBoard, setLoadingBoard] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Cross-project task cache for Overall view and expiring list
   const [allTasksMap, setAllTasksMap] = useState<Record<string, Task[]>>({})
@@ -140,6 +141,7 @@ export default function App() {
         historyIdxRef.current = 0
       })
       .finally(() => setLoadingBoard(false))
+    setSidebarOpen(false) // Close sidebar when project changes
   }, [activeId])
 
   // ── Project handlers ───────────────────────────────────
@@ -394,25 +396,42 @@ export default function App() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      <Sidebar
-        projects={displayProjects}
-        archivedProjects={archivedProjects}
-        activeId={activeId}
-        onSelect={setActiveId}
-        onCreate={handleCreateProject}
-        onRename={handleRenameProject}
-        onDelete={handleDeleteProject}
-        onArchive={handleArchiveProject}
-        onUnarchive={handleUnarchiveProject}
-        expiringTasks={expiringTasks}
-      />
+      {/* Sidebar container */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 transition-transform md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <Sidebar
+          projects={displayProjects}
+          archivedProjects={archivedProjects}
+          activeId={activeId}
+          onSelect={setActiveId}
+          onCreate={handleCreateProject}
+          onRename={handleRenameProject}
+          onDelete={handleDeleteProject}
+          onArchive={handleArchiveProject}
+          onUnarchive={handleUnarchiveProject}
+          expiringTasks={expiringTasks}
+        />
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="shrink-0 border-b-4 border-black z-40"
+        <header className="shrink-0 border-b-4 border-black z-30 relative"
           style={{ background: activeProject ? activeProject.color : '#FFE500' }}>
           <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
-            <div className="mr-1">
-              <h1 className="text-lg font-black uppercase tracking-widest leading-none">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden w-10 h-10 bg-white border-4 border-black font-black flex items-center justify-center shrink-0 text-xl"
+              style={{ boxShadow: '2px 2px 0 #000' }}
+            >
+              ☰
+            </button>
+            <div className="mr-1 min-w-0">
+              <h1 className="text-lg font-black uppercase tracking-widest leading-none truncate">
                 {activeProject ? activeProject.name : 'SELECT A PROJECT'}
               </h1>
               <p className="text-xs font-mono opacity-50">
@@ -429,15 +448,15 @@ export default function App() {
               <button onClick={handleLogout}
                 className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-xs"
                 style={{ boxShadow: '3px 3px 0 #000' }} title="Sign out">
-                ⎋ LOGOUT
+                <span className="md:hidden">⎋</span><span className="hidden md:inline">⎋ LOGOUT</span>
               </button>
               <button onClick={handleExport}
-                className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-xs"
+                className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-xs hidden sm:block"
                 style={{ boxShadow: '3px 3px 0 #000' }} title="Export all data to JSON">
                 ↓ EXPORT
               </button>
               <button onClick={handleImportClick}
-                className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-xs"
+                className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-xs hidden sm:block"
                 style={{ boxShadow: '3px 3px 0 #000' }} title="Import from JSON">
                 ↑ IMPORT
               </button>
@@ -447,13 +466,13 @@ export default function App() {
                 <>
                   <button onClick={handleAutoArrange}
                     className="bg-white font-black uppercase tracking-widest px-3 py-2 border-4 border-black hover:bg-black hover:text-white transition-colors text-sm"
-                    style={{ boxShadow: '4px 4px 0 #000' }}>
-                    ⊞ ARRANGE
+                    style={{ boxShadow: '4px 4px 0 #000' }} title="Auto arrange tasks">
+                    <span className="md:hidden">⊞</span><span className="hidden md:inline">⊞ ARRANGE</span>
                   </button>
                   <button onClick={() => { setEditingTask(null); setShowModal(true) }}
                     className="bg-black text-white font-black uppercase tracking-widest px-4 py-2 border-4 border-black hover:bg-white hover:text-black transition-colors text-sm"
-                    style={{ boxShadow: '4px 4px 0 #000' }}>
-                    + ADD TASK
+                    style={{ boxShadow: '4px 4px 0 #000' }} title="Add new task">
+                    <span className="md:hidden">+</span><span className="hidden md:inline">+ ADD TASK</span>
                   </button>
                 </>
               )}

@@ -50,6 +50,13 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
   const setZoomSync = useCallback((v: number) => { zoomRef.current = v; setZoom(v) }, [])
   const setPanSync = useCallback((v: { x: number; y: number }) => { panRef.current = v; setPan(v) }, [])
 
+  const touchRef = useRef<{
+    startDist: number,
+    startZoom: number,
+    startPan: { x: number, y: number },
+    startC: { x: number, y: number }
+  } | null>(null)
+
   // Measure all card heights after tasks update (covers add/edit/delete)
   useEffect(() => {
     // Clean up refs for removed tasks
@@ -162,6 +169,106 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
     setDrag({ kind: 'pan', startMX: e.clientX, startMY: e.clientY, startPX: panRef.current.x, startPY: panRef.current.y })
   }
 
+  function onTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
+      const startDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+      const cx = (t1.clientX + t2.clientX) / 2
+      const cy = (t1.clientY + t2.clientY) / 2
+      touchRef.current = { startDist, startZoom: zoomRef.current, startPan: { ...panRef.current }, startC: { x: cx, y: cy } }
+      setCtxMenu(null)
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0]
+      setCtxMenu(null)
+      const target = t.target as HTMLElement
+      if (target.closest('button') || target.closest('input') || target.closest('select') || target.closest('textarea')) return
+
+      const portEl = target.closest('[data-port]') as HTMLElement | null
+      if (portEl) {
+        const fromId = portEl.dataset.port!
+        setDrag({ kind: 'connect', fromId })
+        const pos = positions[fromId]
+        if (pos) setConnectPreview({ fromId, curX: pos.x + CARD_W, curY: pos.y + cardH(fromId) / 2 })
+        return
+      }
+
+      const cardEl = target.closest('[data-card]') as HTMLElement | null
+      if (cardEl) {
+        const taskId = cardEl.dataset.card!
+        const pos = positions[taskId] ?? { x: 60, y: 60 }
+        setDrag({ kind: 'card', taskId, startMX: t.clientX, startMY: t.clientY, startCX: pos.x, startCY: pos.y })
+        return
+      }
+
+      setDrag({ kind: 'pan', startMX: t.clientX, startMY: t.clientY, startPX: panRef.current.x, startPY: panRef.current.y })
+    }
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (e.touches.length === 2 && touchRef.current) {
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+      const scale = dist / touchRef.current.startDist
+      const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, touchRef.current.startZoom * scale))
+      zoomRef.current = nextZoom
+      setZoom(nextZoom)
+
+      const cx = (t1.clientX + t2.clientX) / 2
+      const cy = (t1.clientY + t2.clientY) / 2
+
+      const dx = cx - touchRef.current.startC.x
+      const dy = cy - touchRef.current.startC.y
+
+      const rect = containerRef.current!.getBoundingClientRect()
+      const mx = touchRef.current.startC.x - rect.left
+      const my = touchRef.current.startC.y - rect.top
+
+      const p = touchRef.current.startPan
+      const nextPanX = mx - (mx - p.x) * (nextZoom / touchRef.current.startZoom) + dx
+      const nextPanY = my - (my - p.y) * (nextZoom / touchRef.current.startZoom) + dy
+
+      panRef.current = { x: nextPanX, y: nextPanY }
+      setPan(panRef.current)
+
+      if (drag) setDrag(null)
+    } else if (e.touches.length === 1 && drag) {
+      const t = e.touches[0]
+      if (drag.kind === 'pan') {
+        const next = { x: drag.startPX + (t.clientX - drag.startMX), y: drag.startPY + (t.clientY - drag.startMY) }
+        panRef.current = next; setPan(next)
+      } else if (drag.kind === 'card') {
+        const dx = (t.clientX - drag.startMX) / zoomRef.current
+        const dy = (t.clientY - drag.startMY) / zoomRef.current
+        setDraggingPos({ taskId: drag.taskId, x: drag.startCX + dx, y: drag.startCY + dy })
+      } else if (drag.kind === 'connect') {
+        const g = screenToGraph(t.clientX, t.clientY)
+        setConnectPreview({ fromId: drag.fromId, curX: g.x, curY: g.y })
+        setHoveredCard(findCardAt(g.x, g.y, tasks, positions, cardHeightsRef.current) ?? null)
+      }
+    }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length < 2) {
+      touchRef.current = null
+    }
+    if (e.touches.length === 0 && drag) {
+      if (drag.kind === 'card') {
+        setDraggingPos(prev => { if (prev) onTaskMove(prev.taskId, prev.x, prev.y); return null })
+      }
+      if (drag.kind === 'connect') {
+        const t = e.changedTouches[0]
+        const g = screenToGraph(t.clientX, t.clientY)
+        const targetId = findCardAt(g.x, g.y, tasks, positions, cardHeightsRef.current)
+        if (targetId && targetId !== drag.fromId) onConnect(drag.fromId, targetId)
+        setConnectPreview(null); setHoveredCard(null)
+      }
+      setDrag(null)
+    }
+  }
+
   function effectivePos(id: string) {
     if (draggingPos?.taskId === id) return { x: draggingPos.x, y: draggingPos.y }
     return positions[id] ?? { x: 60, y: 60 }
@@ -187,8 +294,12 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
           backgroundImage: 'radial-gradient(circle, #00000018 1px, transparent 1px)',
           backgroundSize: '24px 24px',
           cursor, userSelect: 'none', minHeight: 0,
+          touchAction: 'none'
         }}
         onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         onClick={() => setCtxMenu(null)}
       >
         {tasks.length === 0 && (
