@@ -10,6 +10,7 @@ interface Props {
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
   onToggle: (id: string) => void
+  onNoteClick?: (task: Task) => void
   readOnly?: boolean
 }
 
@@ -31,7 +32,7 @@ const STATUS: Record<TaskStatus, { card: string; badge: string; badgeText: strin
   },
 }
 
-export default function TaskCard({ task, index, isConnectTarget, isConnectSource, onEdit, onDelete, onToggle, readOnly }: Props) {
+export default function TaskCard({ task, index, isConnectTarget, isConnectSource, onEdit, onDelete, onToggle, onNoteClick, readOnly }: Props) {
   const status = getTaskStatus(task)
   const s = STATUS[status]
 
@@ -88,14 +89,22 @@ export default function TaskCard({ task, index, isConnectTarget, isConnectSource
         )}
 
         {/* Notes */}
-        {task.notes && (
-          <div className="mb-2 border-l-4 border-black pl-2">
-            <p className="text-xs font-black uppercase tracking-widest opacity-40 leading-tight">Notes</p>
+        <div 
+          className={`group mb-2 border-l-4 border-black pl-2 ${readOnly ? '' : 'cursor-pointer hover:bg-yellow-50 transition-colors'}`}
+          onMouseDown={e => e.stopPropagation()}
+          onClick={() => !readOnly && onNoteClick?.(task)}
+        >
+          <p className="text-xs font-black uppercase tracking-widest opacity-40 leading-tight flex items-center justify-between">
+            Notes {!readOnly && <span className="opacity-0 group-hover:opacity-100 transition-opacity">✎</span>}
+          </p>
+          {task.notes ? (
             <p className="text-xs text-gray-700 font-mono leading-relaxed whitespace-pre-wrap break-words">
               {task.notes}
             </p>
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-gray-400 font-mono italic">Click to add notes...</p>
+          )}
+        </div>
 
         {/* Attachments */}
         {task.attachments?.length > 0 && (

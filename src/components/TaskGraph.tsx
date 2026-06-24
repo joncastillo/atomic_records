@@ -15,6 +15,7 @@ interface Props {
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
   onToggle: (id: string) => void
+  onNoteClick?: (task: Task) => void
 }
 
 type DragKind =
@@ -29,7 +30,7 @@ const MIN_ZOOM = 0.15
 const MAX_ZOOM = 2.5
 const PORT_OFFSET = 15
 
-export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onDisconnect, onAutoArrange, onUndo, onRedo, onEdit, onDelete, onToggle }: Props) {
+export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onDisconnect, onAutoArrange, onUndo, onRedo, onEdit, onDelete, onToggle, onNoteClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const cardElsRef = useRef<Record<string, HTMLDivElement | null>>({})
   const [cardHeights, setCardHeights] = useState<Record<string, number>>({})
@@ -414,7 +415,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
                   task={task} index={i}
                   isConnectTarget={connectPreview !== null && hoveredCard === task.id && hoveredCard !== connectPreview.fromId}
                   isConnectSource={connectPreview?.fromId === task.id}
-                  onEdit={onEdit} onDelete={onDelete} onToggle={onToggle}
+                  onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onNoteClick={onNoteClick}
                 />
               </div>
             )

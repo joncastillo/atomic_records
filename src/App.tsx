@@ -10,6 +10,7 @@ import TaskGraph from './components/TaskGraph'
 import OverallGraph from './components/OverallGraph'
 import OverallNotes from './components/OverallNotes'
 import TaskModal from './components/TaskModal'
+import NoteEditorFullScreen from './components/NoteEditorFullScreen'
 import StatsBar from './components/StatsBar'
 import Sidebar, { ExpTask } from './components/Sidebar'
 import LoginScreen from './components/LoginScreen'
@@ -32,6 +33,7 @@ export default function App() {
   const [loadingBoard, setLoadingBoard] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [editingNotesTask, setEditingNotesTask] = useState<Task | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Cross-project task cache for Overall view and expiring list
@@ -280,6 +282,15 @@ export default function App() {
     if (!task) return
     patchTask(projectId, taskId, { notes })
     api.updateTask({ ...task, notes })
+  }
+
+  function handleSaveFullScreenNotes(taskId: string, notes: string) {
+    if (!activeId || activeId === OVERALL_PROJECT_ID || activeId === OVERALL_NOTES_PROJECT_ID) return
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+    patchTask(activeId, taskId, { notes })
+    api.updateTask({ ...task, notes })
+    setEditingNotesTask(null)
   }
 
   function handleAutoArrange() {
@@ -547,6 +558,7 @@ export default function App() {
             onEdit={t => { setEditingTask(t); setShowModal(true) }}
             onDelete={handleDelete}
             onToggle={handleToggle}
+            onNoteClick={t => setEditingNotesTask(t)}
           />
         )}
       </div>
@@ -558,6 +570,14 @@ export default function App() {
           onSave={handleSave}
           onClose={closeModal}
           onAttachmentsChange={handleAttachmentsChange}
+        />
+      )}
+
+      {editingNotesTask && activeProject && !isSpecial && (
+        <NoteEditorFullScreen
+          task={editingNotesTask}
+          onSave={handleSaveFullScreenNotes}
+          onClose={() => setEditingNotesTask(null)}
         />
       )}
     </div>
