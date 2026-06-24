@@ -107,6 +107,9 @@ export default function Sidebar({ projects, archivedProjects, activeId, onSelect
                   <input
                     ref={inputRef}
                     value={editValue}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                     onChange={e => setEditValue(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter') confirmEdit(p)
@@ -175,6 +178,9 @@ export default function Sidebar({ projects, archivedProjects, activeId, onSelect
               <input
                 ref={inputRef}
                 value={newName}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') confirmCreate()
