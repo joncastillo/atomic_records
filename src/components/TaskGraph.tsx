@@ -376,14 +376,14 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
         <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: maxX, height: maxY, position: 'absolute', top: 0, left: 0 }}>
           <svg style={{ position: 'absolute', top: 0, left: 0, width: maxX, height: maxY, pointerEvents: 'none', overflow: 'visible' }}>
             <defs>
-              <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0,10 3.5,0 7" fill="#000" />
+              <marker id="arr" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto">
+                <polygon points="0 0,14 5,0 10" fill="#000" />
               </marker>
-              <marker id="arr-hover" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0,10 3.5,0 7" fill="#d97706" />
+              <marker id="arr-hover" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto">
+                <polygon points="0 0,14 5,0 10" fill="#d97706" />
               </marker>
-              <marker id="arr-preview" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0,10 3.5,0 7" fill="#2563eb" />
+              <marker id="arr-preview" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto">
+                <polygon points="0 0,14 5,0 10" fill="#2563eb" />
               </marker>
             </defs>
 
@@ -394,7 +394,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
                 const from = effectivePos(depId)
                 const to = effectivePos(task.id)
                 const x1 = from.x + CARD_W + PORT_OFFSET, y1 = from.y + cardH(depId) / 2
-                const x2 = to.x, y2 = to.y + cardH(task.id) / 2
+                const x2 = to.x - 14, y2 = to.y + cardH(task.id) / 2
                 const mid = (x1 + x2) / 2
                 const d = `M${x1} ${y1} C${mid} ${y1},${mid} ${y2},${x2} ${y2}`
                 return (
@@ -416,7 +416,7 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
             {connectPreview && positions[connectPreview.fromId] && (() => {
               const from = effectivePos(connectPreview.fromId)
               const x1 = from.x + CARD_W + PORT_OFFSET, y1 = from.y + cardH(connectPreview.fromId) / 2
-              const x2 = connectPreview.curX, y2 = connectPreview.curY
+              const x2 = connectPreview.curX - 14, y2 = connectPreview.curY
               const mid = (x1 + x2) / 2
               return <path d={`M${x1} ${y1} C${mid} ${y1},${mid} ${y2},${x2} ${y2}`}
                 stroke="#2563eb" strokeWidth="3" strokeDasharray="8 4" fill="none"
