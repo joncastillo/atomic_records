@@ -434,7 +434,7 @@ app.post('/api/import', (req, res) => {
 
 // ── SPA fallback ──────────────────────────────────────────
 app.get('/cert.pem', (req, res) => {
-  res.download(join(DATA_DIR, 'cert.pem'), 'cert.pem')
+  res.download(join(DATA_DIR, 'rootCA.pem'), 'AtomicRootCA.pem')
 })
 
 app.get('*', (_req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
@@ -453,10 +453,21 @@ try {
     }
   }
 
-  if (!fs.existsSync(join(DATA_DIR, 'cert.pem')) || !fs.existsSync(join(DATA_DIR, 'key.pem'))) {
-    console.log('[server] Generating SSL certificate via OpenSSL...')
+  if (!fs.existsSync(join(DATA_DIR, 'cert.pem')) || !fs.existsSync(join(DATA_DIR, 'rootCA.pem'))) {
+    console.log('[server] Generating strict Root CA and Leaf Certificate...')
     const sanList = ips.map(ip => `IP:${ip}`).join(',') + ',DNS:localhost'
-    execSync(`openssl req -x509 -sha256 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'key.pem')} -out ${join(DATA_DIR, 'cert.pem')} -days 365 -nodes -subj "/CN=192.168.50.199" -addext "subjectAltName=${sanList}" -addext "extendedKeyUsage=serverAuth" -addext "keyUsage=digitalSignature,keyEncipherment" -addext "basicConstraints=CA:FALSE"`)
+    
+    // 1. Generate Root CA
+    execSync(`openssl req -x509 -sha256 -newkey rsa:2048 -keyout ${join(DATA_DIR, 'rootCA.key')} -out ${join(DATA_DIR, 'rootCA.pem')} -days 3650 -nodes -subj "/CN=Atomic Records Local CA" -addext "basicConstraints=critical,CA:TRUE"`)
+    
+    // 2. Generate Leaf CSR and Key
+    execSync(`openssl req -new -newkey rsa:2048 -keyout ${join(DATA_DIR, 'key.pem')} -out ${join(DATA_DIR, 'server.csr')} -nodes -subj "/CN=192.168.50.199"`)
+    
+    // 3. Generate Extfile for Leaf
+    fs.writeFileSync(join(DATA_DIR, 'leaf.ext'), `basicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\nkeyUsage=digitalSignature,keyEncipherment\nsubjectAltName=${sanList}\n`)
+    
+    // 4. Sign Leaf with Root CA
+    execSync(`openssl x509 -req -in ${join(DATA_DIR, 'server.csr')} -CA ${join(DATA_DIR, 'rootCA.pem')} -CAkey ${join(DATA_DIR, 'rootCA.key')} -CAcreateserial -out ${join(DATA_DIR, 'cert.pem')} -days 365 -sha256 -extfile ${join(DATA_DIR, 'leaf.ext')}`)
   }
 
   const privateKey = fs.readFileSync(join(DATA_DIR, 'key.pem'), 'utf8')
