@@ -425,10 +425,10 @@ export default function App() {
           <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden w-10 h-10 bg-white border-4 border-black font-black flex items-center justify-center shrink-0 text-xl"
+              className="md:hidden bg-white border-4 border-black font-black flex items-center justify-center shrink-0 px-3 py-2 text-xs uppercase tracking-widest"
               style={{ boxShadow: '2px 2px 0 #000' }}
             >
-              ☰
+              ◀ Projects
             </button>
             <div className="mr-1 min-w-0">
               <h1 className="text-lg font-black uppercase tracking-widest leading-none truncate">
