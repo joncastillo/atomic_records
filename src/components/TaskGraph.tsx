@@ -29,7 +29,7 @@ interface CtxMenu { screenX: number; screenY: number; fromId: string; toId: stri
 
 const MIN_ZOOM = 0.15
 const MAX_ZOOM = 2.5
-const PORT_OFFSET = 15
+const PORT_OFFSET = 2
 
 export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onDisconnect, onAutoArrange, onUndo, onRedo, onEdit, onDelete, onToggle, onNoteClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -375,22 +375,13 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
         {/* Canvas */}
         <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: maxX, height: maxY, position: 'absolute', top: 0, left: 0 }}>
           <svg style={{ position: 'absolute', top: 0, left: 0, width: maxX, height: maxY, pointerEvents: 'none', overflow: 'visible' }}>
-            <defs>
-              <marker id="arr" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto">
-                <polygon points="0 0,14 5,0 10" fill="#000" />
-              </marker>
-              <marker id="arr-hover" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto">
-                <polygon points="0 0,14 5,0 10" fill="#d97706" />
-              </marker>
-              <marker id="arr-preview" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto">
-                <polygon points="0 0,14 5,0 10" fill="#2563eb" />
-              </marker>
-            </defs>
-
             {tasks.flatMap(task =>
               task.dependsOn.filter(depId => positions[depId]).map(depId => {
                 const key = `${depId}->${task.id}`
                 const isHovered = hoveredArrow === key
+                const fromTask = tasks.find(t => t.id === depId)
+                const edgeColor = fromTask?.labelColor || '#000'
+                const strokeColor = isHovered ? '#d97706' : edgeColor
                 const from = effectivePos(depId)
                 const to = effectivePos(task.id)
                 const x1 = from.x + CARD_W + PORT_OFFSET, y1 = from.y + cardH(depId) / 2
@@ -404,10 +395,12 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ screenX: e.clientX, screenY: e.clientY, fromId: depId, toId: task.id }) }}>
                     <path d={d} stroke="transparent" strokeWidth="14" fill="none" />
                     <path d={d} fill="none"
-                      stroke={isHovered ? '#d97706' : '#000'}
+                      stroke={strokeColor}
                       strokeWidth={isHovered ? 4 : 3}
-                      markerEnd={isHovered ? 'url(#arr-hover)' : 'url(#arr)'}
                       style={{ transition: 'stroke 0.1s, stroke-width 0.1s' }} />
+                    <polygon points={`${x2},${y2-5} ${x2+14},${y2} ${x2},${y2+5}`}
+                      fill={strokeColor}
+                      style={{ transition: 'fill 0.1s' }} />
                   </g>
                 )
               })
@@ -415,12 +408,19 @@ export default function TaskGraph({ tasks, positions, onTaskMove, onConnect, onD
 
             {connectPreview && positions[connectPreview.fromId] && (() => {
               const from = effectivePos(connectPreview.fromId)
+              const fromTask = tasks.find(t => t.id === connectPreview.fromId)
+              const edgeColor = fromTask?.labelColor || '#2563eb'
               const x1 = from.x + CARD_W + PORT_OFFSET, y1 = from.y + cardH(connectPreview.fromId) / 2
               const x2 = connectPreview.curX - 14, y2 = connectPreview.curY
               const mid = (x1 + x2) / 2
-              return <path d={`M${x1} ${y1} C${mid} ${y1},${mid} ${y2},${x2} ${y2}`}
-                stroke="#2563eb" strokeWidth="3" strokeDasharray="8 4" fill="none"
-                markerEnd="url(#arr-preview)" style={{ pointerEvents: 'none' }} />
+              return (
+                <g style={{ pointerEvents: 'none' }}>
+                  <path d={`M${x1} ${y1} C${mid} ${y1},${mid} ${y2},${x2} ${y2}`}
+                    stroke={edgeColor} strokeWidth="3" strokeDasharray="8 4" fill="none" />
+                  <polygon points={`${x2},${y2-5} ${x2+14},${y2} ${x2},${y2+5}`}
+                    fill={edgeColor} />
+                </g>
+              )
             })()}
           </svg>
 
