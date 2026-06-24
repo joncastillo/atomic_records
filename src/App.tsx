@@ -35,6 +35,7 @@ export default function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editingNotesTask, setEditingNotesTask] = useState<Task | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [headerVisible, setHeaderVisible] = useState(true)
 
   // Cross-project task cache for Overall view and expiring list
   const [allTasksMap, setAllTasksMap] = useState<Record<string, Task[]>>({})
@@ -430,9 +431,19 @@ export default function App() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="shrink-0 border-b-4 border-black z-30 relative"
-          style={{ background: activeProject ? activeProject.color : '#FFE500' }}>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+        {activeProject && (
+          <button
+            onClick={() => setHeaderVisible(v => !v)}
+            className="md:hidden absolute top-0 right-0 z-40 bg-white border-b-4 border-l-4 border-black px-2 py-1 text-xs font-black hover:bg-yellow-300 transition-colors"
+          >
+            {headerVisible ? '▲ HIDE' : '▼ MENU'}
+          </button>
+        )}
+
+        {headerVisible && (
+          <header className="shrink-0 border-b-4 border-black z-30 relative"
+            style={{ background: activeProject ? activeProject.color : '#FFE500' }}>
           <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -512,6 +523,7 @@ export default function App() {
             </div>
           )}
         </header>
+        )}
 
         {!activeProject && (
           <div className="flex-1 flex items-center justify-center" style={{ background: '#f5f0e8' }}>
