@@ -440,7 +440,7 @@ const HTTPS_PORT = process.env.HTTPS_PORT ?? 3211
 http.createServer(app).listen(PORT, () => console.log(`[server] HTTP on port ${PORT}`))
 
 try {
-  const ips = ['127.0.0.1']
+  const ips = ['127.0.0.1', '192.168.50.199']
   const nets = networkInterfaces()
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
