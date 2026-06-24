@@ -124,7 +124,7 @@ export default function TaskModal({ task, allTasks, onSave, onClose, onAttachmen
               onChange={e => setTitle(e.target.value)}
               placeholder="Enter task title..."
               required
-              autoComplete="off"
+              autoComplete="nope"
               autoCorrect="off"
               spellCheck="false"
               className="w-full px-3 py-2 font-mono text-sm focus:outline-none focus:bg-yellow-50 bg-white"
@@ -167,7 +167,7 @@ export default function TaskModal({ task, allTasks, onSave, onClose, onAttachmen
               onChange={e => setDescription(e.target.value)}
               placeholder="What needs to be done?"
               rows={3}
-              autoComplete="off"
+              autoComplete="nope"
               autoCorrect="off"
               spellCheck="false"
               className="w-full px-3 py-2 font-mono text-sm focus:outline-none focus:bg-yellow-50 bg-white resize-none"

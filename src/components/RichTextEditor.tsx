@@ -61,6 +61,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       modules={modules}
       placeholder={placeholder}
       className={className}
+      spellCheck={false}
     />
   )
 }

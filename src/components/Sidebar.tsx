@@ -107,7 +107,7 @@ export default function Sidebar({ projects, archivedProjects, activeId, onSelect
                   <input
                     ref={inputRef}
                     value={editValue}
-                    autoComplete="off"
+                    autoComplete="nope"
                     autoCorrect="off"
                     spellCheck="false"
                     onChange={e => setEditValue(e.target.value)}
@@ -178,7 +178,7 @@ export default function Sidebar({ projects, archivedProjects, activeId, onSelect
               <input
                 ref={inputRef}
                 value={newName}
-                autoComplete="off"
+                autoComplete="nope"
                 autoCorrect="off"
                 spellCheck="false"
                 onChange={e => setNewName(e.target.value)}
